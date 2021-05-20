@@ -1,0 +1,4 @@
+venv/
+real_data/
+.vscode/
+PAMI_sim/synthetic_large/data/

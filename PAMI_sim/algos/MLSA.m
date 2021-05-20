@@ -18,8 +18,7 @@ for j=1:J
     s_diag{j} = sqrt(diag(S{j}));
     %     SS{j}=S{j}'*diag(1./diag(r*eye(m)+S{j}*S{j}'))*S{j}*A{j}';
     T{j}=  diag(s_diag{j})*diag(1./sqrt(r+(s_diag{j}).^2)) ;
-    M = [M,A{j}*T{j}];  % this dimension is m*J, which is acceptable - or you can try incremental SVD
-    
+    M = [M,A{j}*T{j}];  % this dimension is m*J, which is acceptable - or you can try incremental SVD   
 end
 
 MM = size(X{1},2);

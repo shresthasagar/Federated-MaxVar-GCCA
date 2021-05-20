@@ -93,123 +93,127 @@ for trial = 1:TotalTrial
 
      
    
-%%  random initialization
-    tic
-    for i=1:I
-        Q_rnd{i}=randn(M,K);   
-    end
-    G_rnd = randn(L,K);
-    [Q,G_1,obj11(trial,:),dist11(trial,:),St1] = LargeGCCA_new( X,K,'G_ini',G_rnd,'Q_ini',Q_rnd,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1,'UM',Ubeta,'Reg_type','fro' );
-    time_proposed = toc;
-    EXTRA = 0;
-    WZW = 0;
+% %%  random initialization
+%     tic
+%     for i=1:I
+%         Q_rnd{i}=randn(M,K);   
+%     end
+%     G_rnd = randn(L,K);
+%     [Q,G_1,obj11(trial,:),dist11(trial,:),St1] = LargeGCCA_new( X,K,'G_ini',G_rnd,'Q_ini',Q_rnd,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1,'UM',Ubeta,'Reg_type','fro' );
+%     time_proposed = toc;
+%     EXTRA = 0;
+%     WZW = 0;
 
   
-    tic
-    [Q,G_2,obj22(trial,:),dist22(trial,:),St2] = LargeGCCA_new( X,K,'G_ini',G_rnd,'Q_ini',Q_rnd,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1000,'EXTRA',1,'UM',Ubeta,'Reg_type','fro' );
-    time_proposed = toc;
-    EXTRA = 0;
-    WZW = 0;
+%     tic
+%     [Q,G_2,obj22(trial,:),dist22(trial,:),St2] = LargeGCCA_new( X,K,'G_ini',G_rnd,'Q_ini',Q_rnd,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1000,'EXTRA',1,'UM',Ubeta,'Reg_type','fro' );
+%     time_proposed = toc;
+%     EXTRA = 0;
+%     WZW = 0;
     
     
-    %% CG-Lanczos
-    for i=1:I
-        Y{i}=(1/sqrt(L))*X{i};
-    end
-    tic
-    [G] = my_gcca(Y,K,r);
-    time_lanc(trial) = toc;
-    cost_lanc(trial) = 0;
-    for j=1:I
-        Q{j} = pcg_mat(@(v)XtX(Y{j},v),Y{j}'*G);
-        cost_lanc(trial) =(1/2)*sum(sum((Y{j}*Q{j}-G).^2))+cost_lanc(trial) +(r/2)*sum(sum(Q{i}.^2));
-    end
+%     %% CG-Lanczos
+%     for i=1:I
+%         Y{i}=(1/sqrt(L))*X{i};
+%     end
+%     tic
+%     [G] = my_gcca(Y,K,r);
+%     time_lanc(trial) = toc;
+%     cost_lanc(trial) = 0;
+%     for j=1:I
+%         Q{j} = pcg_mat(@(v)XtX(Y{j},v),Y{j}'*G);
+%         cost_lanc(trial) =(1/2)*sum(sum((Y{j}*Q{j}-G).^2))+cost_lanc(trial) +(r/2)*sum(sum(Q{i}.^2));
+%     end
     
   
 end  
 
-St1
-St2
-DiagSm(1:K,1:K)
+print = false;
 
-figure(1)
-it1 = length(obj1(1,:));
-loglog([1:it1],mean(obj1(:,1:end)),'-r','linewidth',2);hold on
+if print
+    St1
+    St2
+    DiagSm(1:K,1:K)
 
-it2 = length(obj2(1,:));
-loglog([1:it2],mean(obj2(:,1:end)),'-b','linewidth',2); hold on
+    figure(1)
+    it1 = length(obj1(1,:));
+    loglog([1:it1],mean(obj1(:,1:end)),'-r','linewidth',2);hold on
 
-
-it1 = length(obj11(1,:));
-loglog([1:it1],mean(obj11(:,1:end)),'--r','linewidth',2);hold on
-
-it2 = length(obj22(1,:));
-loglog([1:it2],mean(obj22(:,1:end)),'--b','linewidth',2); hold on
+    it2 = length(obj2(1,:));
+    loglog([1:it2],mean(obj2(:,1:end)),'-b','linewidth',2); hold on
 
 
-obj3=ones(1,max(it1,it2))*mean(global_cost);
-loglog([1:max(it1,it2)],obj3(1:end),'-k','linewidth',2); hold on
+    it1 = length(obj11(1,:));
+    loglog([1:it1],mean(obj11(:,1:end)),'--r','linewidth',2);hold on
 
-obj4=ones(1,max(it1,it2))*mean(cost_MLSA);
-
-obj5=ones(1,max(it1,it2))*mean(cost_lanc);
-
-loglog([1:max(it1,it2)],obj4(1:end),'--k','linewidth',2); hold on
-loglog([1:max(it1,it2)],obj5(1:end),'-g','linewidth',2); hold on
-legend('Proposed (T=1, warm)','Proposed (T = 100, warm)','Proposed (T = 1,randn)','Proposed (T=100,randn)','Global Opt.','MVLSA','CG-Lanczos')
-% title('X_i: 50K x 10K matrix; sparsity = 0.001; nnz = 501,111; Comp. = 50')
-set(gca,'fontsize',14)
-xlabel('iterations','fontsize',14)
-ylabel('cost value','fontsize',14)
-% print('-depsc','sanity_MLSA_ini')
-
-obj1(1,end)
-obj2(1,end)
-global_cost
-
-print('-depsc','lambda_1')
+    it2 = length(obj22(1,:));
+    loglog([1:it2],mean(obj22(:,1:end)),'--b','linewidth',2); hold on
 
 
+    obj3=ones(1,max(it1,it2))*mean(global_cost);
+    loglog([1:max(it1,it2)],obj3(1:end),'-k','linewidth',2); hold on
 
+    obj4=ones(1,max(it1,it2))*mean(cost_MLSA);
 
-%%
-figure(2)
-it1 = length(obj1(1,:));
-semilogy([2:it1],mean(dist1(:,2:end)),'-r','linewidth',2);hold on
+    obj5=ones(1,max(it1,it2))*mean(cost_lanc);
 
-it2 = length(dist2(1,:));
-semilogy([2:it2],mean(dist2(:,2:end)),'-b','linewidth',2); hold on
+    loglog([1:max(it1,it2)],obj4(1:end),'--k','linewidth',2); hold on
+    loglog([1:max(it1,it2)],obj5(1:end),'-g','linewidth',2); hold on
+    legend('Proposed (T=1, warm)','Proposed (T = 100, warm)','Proposed (T = 1,randn)','Proposed (T=100,randn)','Global Opt.','MVLSA','CG-Lanczos')
+    % title('X_i: 50K x 10K matrix; sparsity = 0.001; nnz = 501,111; Comp. = 50')
+    set(gca,'fontsize',14)
+    xlabel('iterations','fontsize',14)
+    ylabel('cost value','fontsize',14)
+    % print('-depsc','sanity_MLSA_ini')
 
+    obj1(1,end)
+    obj2(1,end)
+    global_cost
 
-it1 = length(dist11(1,:));
-semilogy([2:it1],mean(dist11(:,2:end)),'--r','linewidth',2);hold on
-
-it2 = length(dist22(1,:));
-semilogy([2:it2],mean(dist22(:,2:end)),'--b','linewidth',2); hold on
-
-
-% dist3=ones(1,max(it1,it2))*0;
-% semilogy([2:max(it1,it2)],dist3(2:end),'-k','linewidth',2); hold on
-
-% dist4=ones(1,max(it1,it2))*mean(dist_MLSA);
-
-
-% semilogy([2:max(it1,it2)],dist4(2:end),'--k','linewidth',2); hold on
-legend('Proposed (T=1, warm)','Proposed (solved, warm)','Proposed (T = 1,randn)','Proposed (solved,randn)')
-% title('X_i: 50K x 10K matrix; sparsity = 0.001; nnz = 501,111; Comp. = 50')
-set(gca,'fontsize',14)
-xlabel('iterations','fontsize',14)
-ylabel('dist','fontsize',14)
-% print('-depsc','sanity_MLSA_ini')
-
-xlim([1 1000])
-ylim([0 20])
-
-print('-depsc','dist_lambda_1')
+    print('-depsc','lambda_1')
 
 
 
 
+    %%
+    figure(2)
+    it1 = length(obj1(1,:));
+    semilogy([2:it1],mean(dist1(:,2:end)),'-r','linewidth',2);hold on
+
+    it2 = length(dist2(1,:));
+    semilogy([2:it2],mean(dist2(:,2:end)),'-b','linewidth',2); hold on
+
+
+    it1 = length(dist11(1,:));
+    semilogy([2:it1],mean(dist11(:,2:end)),'--r','linewidth',2);hold on
+
+    it2 = length(dist22(1,:));
+    semilogy([2:it2],mean(dist22(:,2:end)),'--b','linewidth',2); hold on
+
+
+    % dist3=ones(1,max(it1,it2))*0;
+    % semilogy([2:max(it1,it2)],dist3(2:end),'-k','linewidth',2); hold on
+
+    % dist4=ones(1,max(it1,it2))*mean(dist_MLSA);
+
+
+    % semilogy([2:max(it1,it2)],dist4(2:end),'--k','linewidth',2); hold on
+    legend('Proposed (T=1, warm)','Proposed (solved, warm)','Proposed (T = 1,randn)','Proposed (solved,randn)')
+    % title('X_i: 50K x 10K matrix; sparsity = 0.001; nnz = 501,111; Comp. = 50')
+    set(gca,'fontsize',14)
+    xlabel('iterations','fontsize',14)
+    ylabel('dist','fontsize',14)
+    % print('-depsc','sanity_MLSA_ini')
+
+    xlim([1 1000])
+    ylim([0 20])
+
+    print('-depsc','dist_lambda_1')
 
 
 
+
+
+
+
+end
