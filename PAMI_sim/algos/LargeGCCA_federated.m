@@ -20,6 +20,7 @@ function [ Q, G ,obj,dist, St] = LargeGCCA_new( X,K, varargin )
     Um = [];
     T = 2;
     L11=0; L21=0;r=0;
+    Nbits = 3;
     %--------------------------------------------------------------
     % Read the optional parameters
     %--------------------------------------------------------------
@@ -54,6 +55,8 @@ function [ Q, G ,obj,dist, St] = LargeGCCA_new( X,K, varargin )
                     REG_TYPE = varargin{i+1}; %'none','fro','L21','L11'
                 case 'UM'
                     Um =  varargin{i+1}; % for measuring error
+                case 'NBITS'
+                    Nbits = varargin{i+1};
                 otherwise
                     % Hmmm, something wrong with the parameter string
                     error(['Unrecognized option: ''' varargin{i} '''']);
@@ -61,7 +64,7 @@ function [ Q, G ,obj,dist, St] = LargeGCCA_new( X,K, varargin )
         end;
     end
 
-
+    Nlevels = 2^(Nbits-1) - 1;
     switch REG_TYPE
         case 'none'
             L11=0;L21=0;r=0;
@@ -161,37 +164,20 @@ function [ Q, G ,obj,dist, St] = LargeGCCA_new( X,K, varargin )
             XQ{i}= (1/sqrt(L))*X{i}*Q{i};
             M_diff{i} = XQ{i} - M_serv{i};
             
-
-            % use imquantize
-            % max_val = max(max(M_diff{i}));
-            % min_val = min(min(M_diff{i}));
-            % diff_val = max_val - min_val;
-    
-            % thresh = [];
-            % for w=1:5
-            %     thresh = [thresh min_val+(w-1)*diff_val/5];
-            % end
-            % M_quant{i} = imquantize(M_diff{i}, thresh, [thresh max_val]);
-            
             % use uniform symmetric 
-            max_val = max(M_diff{i},[], 'all');
+            max_val = max(abs(M_diff{i}),[], 'all');
             % use 3 bits/7 levels symmetric uniform, 2^(n-1)-1
-            M_quant{i} = (round((1/max_val)*M_diff{i})*(max_val/1));
+            M_quant{i} = (round((Nlevels/max_val)*M_diff{i})*(max_val/Nlevels));
             
-            % after this try ceiling instead of round
+            % % use qsgd
+            % M_quant{i} = qsgd(M_diff{i}, 0);
             
             % % sign quantize
             % M_quant{i} = (norm(M_diff{i},1)/(L*K))*sign(M_diff{i});
             
-            % each view i records the error before transmission
-            % M_err{i} = M_diff{i} - M_quant{i};
-            
-            % M_true{i} = XQ{i};
-
             % at the server
             M_serv{i} = M_serv{i} + M_quant{i};
         end
-
 
 
         M_temp = zeros(L,K);
@@ -258,7 +244,7 @@ function [ Q, G ,obj,dist, St] = LargeGCCA_new( X,K, varargin )
     %             q_length(i)=0;
         end
         
-        
+        disp(['obj: ', num2str(obj(it))]);
         if isempty(Um)~=1
             
             dist(it) = norm(Um'*G,2);
@@ -331,53 +317,51 @@ end
 end
 
 function x = L2_Linf_shrink(y,t)
-% This function minimizes
-%     0.5*||b*x-y||_2^2 + t*||x||_inf
-% where b is a scalar.  Note that it suffices
-% to consider the minimization
-%     0.5*||x-y||_2^2 + t/b*||x||_inf
-% and so we will assume that the value of b has
-% been absorbed into t (= tau).
-% The minimization proceeds by initializing
-% x with y.  Let z be y re-ordered so that
-% the abs(z) is in descending order.  Then
-% first solve
-%     min_{b>=abs(z2)} 0.5*(b-abs(z1))^2 + t*b
-% if b* = abs(z2), then repeat with first and
-% second largest z values;
-%     min_{b>=abs(z3)} 0.5*(b-abs(z1))^2+0.5*(b-abs(z2))^2 + t*b
-% which by expanding the square is equivalent to
-%     min_{b>=abs(z3)} 0.5*(b-mean(abs(z1),abs(z2)))^2 + t*b
-% and repeat this process if b*=abs(z3), etc.
-% This reduces problem to finding a cut-off index, where
-% all coordinates are shrunk up to and including that of
-% the cut-off index.  The cut-off index is the smallest
-% integer k such that
-%    1/k sum(abs(z(1)),...,abs(z(k))) - t/k <= abs(z(k+1))
-%
+    % This function minimizes
+    %     0.5*||b*x-y||_2^2 + t*||x||_inf
+    % where b is a scalar.  Note that it suffices
+    % to consider the minimization
+    %     0.5*||x-y||_2^2 + t/b*||x||_inf
+    % and so we will assume that the value of b has
+    % been absorbed into t (= tau).
+    % The minimization proceeds by initializing
+    % x with y.  Let z be y re-ordered so that
+    % the abs(z) is in descending order.  Then
+    % first solve
+    %     min_{b>=abs(z2)} 0.5*(b-abs(z1))^2 + t*b
+    % if b* = abs(z2), then repeat with first and
+    % second largest z values;
+    %     min_{b>=abs(z3)} 0.5*(b-abs(z1))^2+0.5*(b-abs(z2))^2 + t*b
+    % which by expanding the square is equivalent to
+    %     min_{b>=abs(z3)} 0.5*(b-mean(abs(z1),abs(z2)))^2 + t*b
+    % and repeat this process if b*=abs(z3), etc.
+    % This reduces problem to finding a cut-off index, where
+    % all coordinates are shrunk up to and including that of
+    % the cut-off index.  The cut-off index is the smallest
+    % integer k such that
+    %    1/k sum(abs(z(1)),...,abs(z(k))) - t/k <= abs(z(k+1))
+    %
 
-x = y;
-[dummy,o] = sort(abs(y),'descend');
-z = y(o);
-mz = abs(z);
+    x = y;
+    [dummy,o] = sort(abs(y),'descend');
+    z = y(o);
+    mz = abs(z);
 
-% find cut-off index
-cs = cumsum(abs(z(1:length(z)-1)))./(1:length(z)-1)'-t./(1:length(z)-1)';
-d = (cs>abs(z(2:length(z))));
-if sum(d) == 0
-    cut_index = length(y);
-else
-    cut_index = min(find(d==1));
+    % find cut-off index
+    cs = cumsum(abs(z(1:length(z)-1)))./(1:length(z)-1)'-t./(1:length(z)-1)';
+    d = (cs>abs(z(2:length(z))));
+    if sum(d) == 0
+        cut_index = length(y);
+    else
+        cut_index = min(find(d==1));
+    end
+
+    % shrink coordinates 1 to cut_index
+    zbar = mean(abs(z(1:cut_index)));
+    if cut_index < length(y)
+        x(o(1:cut_index)) = sign(z(1:cut_index))*max(zbar-t/cut_index,abs(z(cut_index+1)));
+    else
+        x(o(1:cut_index)) = sign(z(1:cut_index))*max(zbar-t/cut_index,0);
+    end
+
 end
-
-% shrink coordinates 1 to cut_index
-zbar = mean(abs(z(1:cut_index)));
-if cut_index < length(y)
-    x(o(1:cut_index)) = sign(z(1:cut_index))*max(zbar-t/cut_index,abs(z(cut_index+1)));
-else
-    x(o(1:cut_index)) = sign(z(1:cut_index))*max(zbar-t/cut_index,0);
-end
-
-end
-
-

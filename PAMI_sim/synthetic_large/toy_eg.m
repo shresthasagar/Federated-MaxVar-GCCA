@@ -19,12 +19,12 @@ dev = .1;
 for trial = 1:TotalTrial
     disp(['at trial ',num2str(trial)])
     I = 3;
-    L = 10000;
-    M = 5000; 
-    N = M;
+    L = 100000;
+    M = 50000; 
+    N = 100;
     K = 10;
     m = 100;
-    sparsity_level = 2e-3;
+    sparsity_level = 1e-4;
     
     Z = sprandn(L,N,sparsity_level);
     for i=1:I
@@ -32,25 +32,23 @@ for trial = 1:TotalTrial
         X{i}=Z*A{i};
         X{i}=sparse(X{i});
     end
-    Zf = full(Z);
-    [Uz, ~, ~]  = svd(Zf, 0);
-    Ubeta = Uz(:, K+1:end);
+    % Zf = full(Z);
+    % [Uz, ~, ~]  = svd(Zf, 0);
+    % Ubeta = Uz(:, K+1:end);
 
 
     %% How to initialize is another problem...
      
     r = 0;
     tic;
-    [ G_ini,Q_ini,Ux,Us,UB,cost_MLSA(trial),Li ] = MLSA( X,K,m,r);
-    timeMLSA(trial) =toc;
-    
     filename = ['trial_',num2str(trial)];
-    save(filename,'X','G_ini','Q_ini','cost_MLSA','Li')
+    % [ G_ini,Q_ini,Ux,Us,UB,cost_MLSA(trial),Li ] = MLSA( X,K,m,r);
+    % % timeMLSA(trial) =toc;
     
-
+    % save(filename,'X','G_ini','Q_ini','cost_MLSA','Li');
     
        
-    MaxIt = 200; 
+    MaxIt = 100; 
     tic
 
     % load from file
@@ -71,9 +69,11 @@ for trial = 1:TotalTrial
     % [Um, ~,~] = svd(M,0);
 
     %%
-    % [Q,G_1,obj1(trial,:),~,St1] = LargeGCCA_federated( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',10, 'Reg_type', 'none');
+    [Q,G_1,obj1(trial,:),~,St1, t1] = LargeGCCA_federated_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1, 'Reg_type', 'fro', 'nbits', 2, 'sgd', true, 'batch_size', 10000);
 
-    [Q2,G_2,obj2(trial,:),dist2,St2] = LargeGCCA_new( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',10, 'Reg_type', 'none', 'Um', Ubeta);
+
+    [Q,G_2,obj2(trial,:),~,St2, t2] = LargeGCCA_federated_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1, 'Reg_type', 'fro', 'nbits', 2, 'sgd', false, 'batch_size', 1000);
+    % [Q2,G_2,obj2(trial,:),dist2,St2] = LargeGCCA_new( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',100, 'Reg_type', 'none');
 
     time_proposed_1(trial) = toc;
    

@@ -2,3 +2,9 @@ venv/
 real_data/
 .vscode/
 PAMI_sim/synthetic_large/data/
+**log.txt
+dgcca/data/
+dgcca/trained_models/
+dgcca/plt/
+**__pycache__/
+**data/

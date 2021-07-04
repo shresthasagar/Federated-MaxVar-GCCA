@@ -236,7 +236,7 @@ function [ Q, G ,obj,dist, St] = LargeGCCA_new( X,K, varargin )
                 obj(it)=sum(obj_temp);
     %             q_length(i)=0;
         end
-        
+        disp(['obj: ', num2str(obj(it))]);
         
         if isempty(Um)~=1
             

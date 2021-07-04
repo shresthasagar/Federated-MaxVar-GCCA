@@ -32,7 +32,7 @@ for trial = 1:TotalTrial
 %         [Ua,~,Va]=svd(A{i});
 %         A{i}=Va(1:N,:)+ dev*randn(N,M);
         
-        X{i}=Z*A{i} + .1*randn(L,M); 
+        X{i}=Z*A{i} + .01*randn(L,M); 
         condnum(i)=cond((1/L)*X{1}'*X{1});
         
         % X{i}(:,end-Lbad+1:end)=randn(L,Lbad);
@@ -45,7 +45,7 @@ for trial = 1:TotalTrial
     %% computing the global solution
     tic
     ZZ = zeros(L,L);
-    MM = zeros(L,L); r = .1; M_clean=zeros(L,L);
+    MM = zeros(L,L); r = 1; M_clean=zeros(L,L);
     for i=1:I
 %         M_clean = M_clean + X_clean{i}*((X_clean{i}'*X_clean{i}+r*eye(M))\X_clean{i}')
         MM = MM + L*X{i}*(((1/L)*X{i}'*X{i}+r*eye(M))\X{i}');
@@ -55,10 +55,18 @@ for trial = 1:TotalTrial
     [Um,Sm,Vm]=svd(MM); 
     DiagSm = Sm/I; 
 
+
+    [V, D] = eig(MM);
+    [~, perm] = sort(real(diag(D)), 'descend');
+    I = eye(L);
+    P = I(perm, :);
+    V_sorted = V*P;
+    Ubeta = V_sorted(:,K+1:end);
+    
     % Ubeta = Um(:,1:K);
 
-    Ubeta = Um(:,K+1:end);
-    tic;
+    % Ubeta = Um(:,K+1:end);
+    % tic;
 
     [ G_ini,Q_ini,Ux,Us,UB,cost_MLSA(trial),Li ] = MLSA( X,K,m,r);
     dist_MLSA(trial)=norm(G_ini'*Ubeta,2);
@@ -73,7 +81,7 @@ for trial = 1:TotalTrial
     
     [Q,G_1,obj1(trial,:),dist1,St1] = LargeGCCA_federated( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',100, 'Reg_type', 'fro', 'Um', Ubeta);
     
-    [Q2,G_2,obj2(trial,:),dist2,St2] = LargeGCCA_new( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',100, 'Reg_type', 'fro', 'Um', Ubeta);
+    % [Q2,G_2,obj2(trial,:),dist2,St2] = LargeGCCA_new( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1, 'Reg_type', 'fro', 'Um', Ubeta);
 
     
 end
