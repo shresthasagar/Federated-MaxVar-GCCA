@@ -5,9 +5,10 @@ function quantized = qsgd(V, n_bits)
     norm_V = max(abs(V), [], 'all');
 
     V_normalized = abs(V)/norm_V;
-    s = 2^n_bits;
+    s = 2^(n_bits-1)-1;
     V_scaled = V_normalized * s;
-    l = 0;
+    % l = 0;
+    l = floor(V_scaled);
     prob = V_scaled - l;
     
     r = rand(size(V));
@@ -16,7 +17,6 @@ function quantized = qsgd(V, n_bits)
 
     V_recovered = l.*V_sign;
     quantized =  V_recovered*norm_V / s;
-
 end
 
 function y = bound(x,bl,bu)

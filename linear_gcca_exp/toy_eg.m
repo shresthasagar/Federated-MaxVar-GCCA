@@ -5,8 +5,11 @@
 
 
 
-addpath ../algos
-addpath ../cg_matlab
+addpath /scratch/sagar/Projects/matlab/lib/tensor_toolbox
+addpath ../PAMI_sim/functions
+addpath ../PAMI_sim/algos
+addpath ../PAMI_sim/cg_matlab
+
 
 clear;
 clc;
@@ -16,21 +19,40 @@ close;
  
 TotalTrial = 1;
 dev = .1;
+n_bits = 3;
+MaxIt = 30; 
+InnerIt = 1000;
 for trial = 1:TotalTrial
     disp(['at trial ',num2str(trial)])
+    % I = 3;
+    % L = 100000;
+    % M = 50000; 
+    % N = 100;
+    % K = 10;
+    % m = 100;
+    % sparsity_level = 1e-6;
+    
+    % Z = sprandn(L,N,sparsity_level);
+    % for i=1:I
+    %     A{i}=sprandn(N,M,.00001);
+    %     X{i}=Z*A{i};
+    %     X{i}=sparse(X{i});
+    % end
+
     I = 3;
-    L = 100000;
-    M = 50000; 
-    N = 100;
+    L = 50000;
+    M = 30000;
+    N = 30000;
     K = 10;
     m = 100;
-    sparsity_level = 1e-4;
-    
-    Z = sprandn(L,N,sparsity_level);
+    Z = sprandn(L,N, 1e-4);%*diag(2+1*randn(N,1));
     for i=1:I
-        A{i}=sprandn(N,M,.00001);
-        X{i}=Z*A{i};
-        X{i}=sparse(X{i});
+        A{i}=sprandn(N,M, 0.00001);%+ 1*eye(N,N);
+%         [Ua,~,Va]=svd(A{i});
+%         A{i}=Va(1:N,:)+ dev*randn(N,M);
+        
+        X{i}=Z*A{i}; % + .1*randn(L,M); 
+        % condnum(i)=cond((1/L)*X{1}'*X{1});
     end
     % Zf = full(Z);
     % [Uz, ~, ~]  = svd(Zf, 0);
@@ -39,20 +61,20 @@ for trial = 1:TotalTrial
 
     %% How to initialize is another problem...
      
-    r = 0;
+    r = 0.1;
     tic;
-    filename = ['trial_',num2str(trial)];
-    % [ G_ini,Q_ini,Ux,Us,UB,cost_MLSA(trial),Li ] = MLSA( X,K,m,r);
-    % % timeMLSA(trial) =toc;
-    
-    % save(filename,'X','G_ini','Q_ini','cost_MLSA','Li');
-    
+    filename = ['data/rand_',num2str(trial)];
+%     [ G_ini,Q_ini,Ux,Us,UB,cost_MLSA(trial),Li ] = MLSA( X,K,m,r);
+%     % timeMLSA(trial) =toc;
+%     cost_MLSA(trial)
+%     save(filename,'X','G_ini','Q_ini','cost_MLSA','Li');
+%     
        
-    MaxIt = 100; 
+
     tic
 
     % load from file
-    filename = ['trial_',num2str(trial)]; 
+    % filename = ['data/rand_',num2str(trial)]; 
     init_vars  = load(filename);
 
     X = init_vars.X;
@@ -67,18 +89,35 @@ for trial = 1:TotalTrial
     %     XX = XX + X{i}*inv(X{i}'*X{i})*X{i}';
     % end
     % [Um, ~,~] = svd(M,0);
+    [Q2,G_2,obj2(trial,:),~,St2, t2] = LargeGCCA_federated_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none', 'nbits', n_bits, 'sgd', false, 'batch_size', 10000, 'rand_compress', true, 'federated', true, 'compress_g', false);
 
-    %%
-    [Q,G_1,obj1(trial,:),~,St1, t1] = LargeGCCA_federated_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1, 'Reg_type', 'fro', 'nbits', 2, 'sgd', true, 'batch_size', 10000);
+    [Q1,G_1,obj1(trial,:),~,St1, t1] = LargeGCCA_federated_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none', 'nbits', n_bits, 'sgd', false, 'batch_size', 10000, 'rand_compress', true, 'federated', true, 'compress_g', true);
+    
+    
 
+    % [Q2,G_2,obj2(trial,:),~,St2, t2] = LargeGCCA_federated_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none', 'nbits', n_bits, 'sgd', false, 'batch_size', 10000, 'rand_compress', true, 'federated', true);
 
-    [Q,G_2,obj2(trial,:),~,St2, t2] = LargeGCCA_federated_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1, 'Reg_type', 'fro', 'nbits', 2, 'sgd', false, 'batch_size', 1000);
-    % [Q2,G_2,obj2(trial,:),dist2,St2] = LargeGCCA_new( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',100, 'Reg_type', 'none');
+    % [Q3,G_3,obj3(trial,:),~,St3, t3] = LargeGCCA_federated_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none', 'nbits', n_bits, 'sgd', false, 'batch_size', 10000, 'rand_compress', true, 'federated', false);
+
+    % [Q,G_2,obj2(trial,:),~,St2, t2] = LargeGCCA_federated_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1, 'Reg_type', 'fro', 'nbits', 2, 'sgd', false, 'batch_size', 1000);
+
+    % [Q2,G_2,obj2(trial,:),dist2,St2] = LargeGCCA_new( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none');
 
     time_proposed_1(trial) = toc;
    
 end   
-    
+save('data/compress_g.mat', 'obj1', 'obj2')
+
+% save('data/rand_compressor_2bits_2norm.mat', 'obj2' )
+
+%%
+
+plot(obj1, 'LineWidth', 2); hold on;
+plot(obj2, 'LineWidth', 2); hold on;
+% plot(obj3, 'LineWidth', 2); hold on;
+legend('with G compression', 'without G compression');
+title('full resolution and compressed G with random compressor 3 bits, 1000 inner iter')
+%%
 %     tic
 %     [Q,G_2,obj2(trial,:),~,St2] = LargeGCCA_new( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',10,'EXTRA',0 );
 %     time_proposed_10(trial) = toc;

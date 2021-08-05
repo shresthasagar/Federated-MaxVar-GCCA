@@ -1,4 +1,4 @@
-function [ Q, G ,obj,dist, St, time] = LargeGCCA_new( X,K, varargin )
+function [ Q, G ,obj,dist, St, time] = LargeGCCA_federated_stochastic( X,K, varargin )
 
     %MaxIt,G,Q,Li,EXTRA,WZW,norm_vec,vec_ind
 
@@ -22,6 +22,7 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_new( X,K, varargin )
     L11=0; L21=0;r=0;
     Nbits = 3;
     sgd = false;
+    compress_g = false;
     %--------------------------------------------------------------
     % Read the optional parameters
     %--------------------------------------------------------------
@@ -60,6 +61,12 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_new( X,K, varargin )
                     sgd = varargin{i+1};
                 case 'BATCH_SIZE'
                     batch_size = varargin{i+1};
+                case 'RAND_COMPRESS'
+                    rand_compress = varargin{i+1};  
+                case 'FEDERATED'
+                    federated = varargin{i+1};  
+                case 'COMPRESS_G'
+                    compress_g = varargin{i+1};
                 otherwise
                     % Hmmm, something wrong with the parameter string
                     error(['Unrecognized option: ''' varargin{i} '''']);
@@ -109,28 +116,34 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_new( X,K, varargin )
             M_serv{i} = (1/sqrt(L))*X{i}*Q{i};
         end
     end
+    G_quant = 0;
+    G_client = G;
 
     tic
     for it=1:MaxIt
-        disp(['at iteration ',num2str(it)])
+        disp(['at iteration ',num2str(it)]);
+
+        % At server: Recover G
+        G_client = G_client + G_quant;
+
         if sgd
             for i=1:I
                 batch_ind = randperm(L);
                 batch = X{i};
                 batch(batch_ind(1:L-batch_size), :) = 0;
                 for inner_it=1:T % Gradient Descent
-                    Q{i}=Q{i}-(5*1/Li{i})*((1/normalizer)*batch'*(batch*Q{i})+r*Q{i}-(1/sqrt(normalizer))*batch'*G);
+                    Q{i}=Q{i}-(5*1/Li{i})*((1/normalizer)*batch'*(batch*Q{i})+r*Q{i}-(1/sqrt(normalizer))*batch'*G_client);
                 end
             end
         else
             for i=1:I  
                 for inner_it=1:T % Gradient Descent
-                    Q{i}=Q{i}-(1/Li{i})*((1/L)*X{i}'*(X{i}*Q{i})+r*Q{i}-(1/sqrt(L))*X{i}'*G);
+                    Q{i}=Q{i}-(1/Li{i})*((1/L)*X{i}'*(X{i}*Q{i})+r*Q{i}-(1/sqrt(L))*X{i}'*G_client);
                 end    
             end
         end
         time(it) = toc;
-        disp(['time gd: ', num2str(toc)]);    
+        % disp(['time gd: ', num2str(toc)]);
         
 
         for i=1:I
@@ -142,13 +155,18 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_new( X,K, varargin )
             end
             M_diff{i} = XQ{i} - M_serv{i};
             
-            % use uniform symmetric quantization 
-            max_val = max(abs(M_diff{i}),[], 'all');
-            M_quant{i} = (round((Nlevels/max_val)*M_diff{i})*(max_val/Nlevels));
-            
-            % % use qsgd
-            % M_quant{i} = qsgd(M_diff{i}, 0);
-            
+            if federated
+                if rand_compress
+                    % use qsgd
+                    M_quant{i} = qsgd(M_diff{i}, Nbits);
+                else    
+                    % use uniform symmetric quantization 
+                    max_val = max(abs(M_diff{i}),[], 'all');
+                    M_quant{i} = (round((Nlevels/max_val)*M_diff{i})*(max_val/Nlevels));
+                end
+            else
+                M_quant{i} = M_diff{i};
+            end
             % % sign quantize
             % M_quant{i} = (norm(M_diff{i},1)/(L*K))*sign(M_diff{i});
             
@@ -167,6 +185,15 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_new( X,K, varargin )
         [Ut,St,Vt]=svd(M_temp,0);
         G = Ut(:,1:K)*Vt';
         
+        if compress_g
+            if rand_compress
+                G_quant = compress(G-G_client, Nbits, 'qsgd', true);
+            else
+                G_quant = compress(G-G_client, Nbits, 'deterministic', true);
+            end
+        else
+            G_quant = G - G_client;
+        end
         % time_acc(it)=sum(time_perit);
         
         obj_temp = 0;
@@ -215,9 +242,26 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_new( X,K, varargin )
 end
 
 
-function qunat = qunatize(M_diff, nbits)
-    if nbits==1
-        quant = 1
+function quant = compress(diff, nbits, type, use_max_norm)
+    if nargin < 4
+        use_max_norm = true;
     end
+
+    if use_max_norm
+        ref_val = max(abs(diff),[], 'all');
+    end
+
+    [L, K] = size(diff);
+
+    nlevels = 2^(nbits-1) - 1;
+
+    if strcmp(type, 'qsgd')
+        quant = qsgd(diff, nbits);
+    elseif strcmp(type, 'signsgd')
+        quant = (norm(diff,1)/(L*K))*sign(diff);
+    elseif strcmp(type, 'deterministic')
+        quant = (round((nlevels/ref_val)*diff)*(ref_val/nlevels));
+    end
+
 end
 
