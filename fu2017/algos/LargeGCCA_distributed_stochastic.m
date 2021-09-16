@@ -1,4 +1,4 @@
-function [ Q, G ,obj,dist, St, time] = LargeGCCA_federated_stochastic( X,K, varargin )
+function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, varargin )
 
     %MaxIt,G,Q,Li,EXTRA,WZW,norm_vec,vec_ind
 
@@ -23,6 +23,8 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_federated_stochastic( X,K, vara
     Nbits = 3;
     sgd = false;
     compress_g = false;
+    compress_avg = false;
+    distributed = false;
     %--------------------------------------------------------------
     % Read the optional parameters
     %--------------------------------------------------------------
@@ -63,10 +65,12 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_federated_stochastic( X,K, vara
                     batch_size = varargin{i+1};
                 case 'RAND_COMPRESS'
                     rand_compress = varargin{i+1};  
-                case 'FEDERATED'
-                    federated = varargin{i+1};  
+                case 'DISTRIBUTED'
+                    distributed = varargin{i+1};  
                 case 'COMPRESS_G'
                     compress_g = varargin{i+1};
+                case 'COMPRESS_AVG'
+                    compress_avg = varargin{i+1}
                 otherwise
                     % Hmmm, something wrong with the parameter string
                     error(['Unrecognized option: ''' varargin{i} '''']);
@@ -119,6 +123,15 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_federated_stochastic( X,K, vara
     G_quant = 0;
     G_client = G;
 
+    M_avg_quant = 0;
+    M_temp = zeros(L,K);
+    for i=1:i
+        M_temp = M_temp + M_serv{i};
+    end
+    M_temp = M_temp/I;
+
+    M_avg_serv = M_temp;
+
     tic
     for it=1:MaxIt
         disp(['at iteration ',num2str(it)]);
@@ -143,7 +156,6 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_federated_stochastic( X,K, vara
             end
         end
         time(it) = toc;
-        % disp(['time gd: ', num2str(toc)]);
         
 
         for i=1:I
@@ -155,7 +167,7 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_federated_stochastic( X,K, vara
             end
             M_diff{i} = XQ{i} - M_serv{i};
             
-            if federated
+            if distributed
                 if rand_compress
                     % use qsgd
                     M_quant{i} = qsgd(M_diff{i}, Nbits);
@@ -181,8 +193,20 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_federated_stochastic( X,K, vara
         end
         M_temp = M_temp/I;
         
+        if compress_avg
+            if rand_compress
+                M_avg_quant = compress(M_temp-M_avg_serv, Nbits, 'qsgd', true);
+            else
+                M_avg_quant = compress(M_temp-M_avg_serv, Nbits, 'deterministic', true);
+            end
+        else
+            M_avg_quant = M_temp - M_avg_serv;
+        end
+
+        M_avg_serv = M_avg_serv + M_avg_quant;
         % SVD version - global optimality guaranteed
-        [Ut,St,Vt]=svd(M_temp,0);
+        % [Ut,St,Vt]=svd(M_temp,0);
+        [Ut,St,Vt]=svd(M_avg_serv,0);
         G = Ut(:,1:K)*Vt';
         
         if compress_g

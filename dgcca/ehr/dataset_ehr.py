@@ -85,3 +85,46 @@ def get_ehr_data(trian=True, normalize=False, shuffle=True, data_file=None):
         assert os.path.isfile(data_file), "The given path is not a file"
         mat, labeled_data = torch.load(data_file)
     x  = torch.stack(mat)
+
+def get_frequent_indices(y, min_count=40, except_classes = [15]):
+    """
+    @params: 
+        y: a 1-D tensor of class labels
+        min_count: 
+        except_ind: except the class labels in this list
+    @return:
+        freq_id: list of indices of class labels with frequency greater than or equal to min_count
+    """
+
+    # sort x and y according to class index
+    a = np.argsort(y)
+    y_sorted = y[a]
+    
+    num_ind = []
+    idx = {y_sorted[0].item():1}
+    j = y_sorted[0]
+    sumid = 0
+
+    # count all the indices
+    for i in y_sorted:
+        if not j==i:
+            j = i
+            idx[j.item()] = 1
+            num_ind.append(sumid)
+            sumid = 0
+        else:
+            idx[i.item()] += 1
+
+    # get the most frequent classes
+    frequent_keys = []
+    for key in idx:
+        if idx[key] >= min_count and not key in except_classes:
+            frequent_keys.append(key)
+
+    # remove the entities related to SYMPTOMS, SIGNS, AND ILL-DEFINED CONDITIONS (780-799)
+    freq_id = []
+    for i in range(len(y)):
+        if y[i] in frequent_keys:
+            freq_id.append(i)
+
+    return freq_id, frequent_keys

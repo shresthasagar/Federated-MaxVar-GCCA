@@ -7,6 +7,7 @@ venv/
 **data
 **plt
 **log*
+**trained_models
 
 dgcca/data
 dgcca/trained_models
@@ -17,4 +18,4 @@ fu2017/synthetic_large/data
 real_data
 
 ehr/desynpuf
-writeup
+write-up

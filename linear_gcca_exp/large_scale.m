@@ -6,10 +6,10 @@
 
 
 addpath /scratch/sagar/Projects/matlab/lib/tensor_toolbox
-% addpath ../fu2017/functions
-% addpath ../fu2017/algos
-% addpath ../fu2017/cg_matlab
-addpath src
+addpath ../fu2017/functions
+addpath ../fu2017/algos
+addpath ../fu2017/cg_matlab
+
 
 clear;
 clc;
@@ -61,7 +61,7 @@ for trial = 1:TotalTrial
 
     %% How to initialize is another problem...
      
-    r = 0.01;
+    r = 0.1;
     tic;
     filename = ['data/rand_',num2str(trial)];
     % [ G_ini,Q_ini,Ux,Us,UB,cost_MLSA(trial),Li ] = MLSA( X,K,m,r);
@@ -89,18 +89,18 @@ for trial = 1:TotalTrial
     %     XX = XX + X{i}*inv(X{i}'*X{i})*X{i}';
     % end
     % [Um, ~,~] = svd(M,0);
-    % [Q3,G_3,obj3(trial,:),~,St2, t2] = LargeGCCA_distributed_stochastic( X, K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none', 'nbits', n_bits, 'sgd', false, 'batch_size', 10000, 'rand_compress', true, 'distributed', false, 'compress_g', false);
-    [Q2,G_2,obj2(trial,:),~,St1, t1] = LargeGCCA_distributed_stochastic( X, K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none', 'nbits', n_bits, 'sgd', false, 'batch_size', 10000, 'rand_compress', true, 'distributed', true, 'compress_avg', true, 'print_log', true);
+    % [Q3,G_3,obj3(trial,:),~,St2, t2] = LargeGCCA_federated_stochastic( X, K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none', 'nbits', n_bits, 'sgd', false, 'batch_size', 10000, 'rand_compress', true, 'federated', false, 'compress_g', false);
+    [Q2,G_2,obj2(trial,:),~,St1, t1] = LargeGCCA_federated_stochastic( X, K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none', 'nbits', n_bits, 'sgd', false, 'batch_size', 10000, 'rand_compress', true, 'federated', true, 'compress_avg', true);
 
-    [Q1,G_1,obj1(trial,:),~,St1, t1] = LargeGCCA_distributed_stochastic( X, K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none', 'nbits', n_bits, 'sgd', false, 'batch_size', 10000, 'rand_compress', true, 'distributed', true, 'compress_g', true, 'print_log', true);
+    [Q1,G_1,obj1(trial,:),~,St1, t1] = LargeGCCA_federated_stochastic( X, K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none', 'nbits', n_bits, 'sgd', false, 'batch_size', 10000, 'rand_compress', true, 'federated', true, 'compress_g', true);
     
     
 
-    % [Q2,G_2,obj2(trial,:),~,St2, t2] = LargeGCCA_distributed_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none', 'nbits', n_bits, 'sgd', false, 'batch_size', 10000, 'rand_compress', true, 'distributed', true);
+    % [Q2,G_2,obj2(trial,:),~,St2, t2] = LargeGCCA_federated_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none', 'nbits', n_bits, 'sgd', false, 'batch_size', 10000, 'rand_compress', true, 'federated', true);
 
-    % [Q3,G_3,obj3(trial,:),~,St3, t3] = LargeGCCA_distributed_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none', 'nbits', n_bits, 'sgd', false, 'batch_size', 10000, 'rand_compress', true, 'distributed', false);
+    % [Q3,G_3,obj3(trial,:),~,St3, t3] = LargeGCCA_federated_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none', 'nbits', n_bits, 'sgd', false, 'batch_size', 10000, 'rand_compress', true, 'federated', false);
 
-    % [Q,G_2,obj2(trial,:),~,St2, t2] = LargeGCCA_distributed_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1, 'Reg_type', 'fro', 'nbits', 2, 'sgd', false, 'batch_size', 1000);
+    % [Q,G_2,obj2(trial,:),~,St2, t2] = LargeGCCA_federated_stochastic( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1, 'Reg_type', 'fro', 'nbits', 2, 'sgd', false, 'batch_size', 1000);
 
     % [Q2,G_2,obj2(trial,:),dist2,St2] = LargeGCCA_new( X,K,'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',InnerIt, 'Reg_type', 'none');
 

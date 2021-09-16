@@ -84,7 +84,6 @@ class DeepGCCA(nn.Module):
 
         return output_list
 
-
 class AELinear(nn.Module):
     """
     Linear autoencoder Model 
@@ -105,42 +104,66 @@ class AELinear(nn.Module):
         self.encoder = nn.Sequential(
             Flatten(),
             nn.Linear(input_size, 1024),
-            nn.norm(1024),
+            self.norm(1024),
             self.act(),
             
             nn.Linear(1024, 1024),
-            nn.norm(1024),
+            self.norm(1024),
             self.act(),
 
             nn.Linear(1024, 1024),
-            nn.norm(1024),
+            self.norm(1024),
             self.act(),
 
             nn.Linear(1024, output_size)
         )
-
         self.decoder = nn.Sequential(
             nn.Linear(output_size, 1024),
-            nn.norm(1024),
+            self.norm(1024),
             self.act(),
             
             nn.Linear(1024, 1024),
-            nn.norm(1024),
+            self.norm(1024),
             self.act(),
 
             nn.Linear(1024, 1024),
-            nn.norm(1024),
+            self.norm(1024),
             self.act(),
 
             nn.Linear(1024, input_size),
             self.act()
         )
+
+        self.encoder = nn.Sequential(
+            Flatten(),
+            nn.Linear(input_size, 512),
+            self.norm(512),
+            self.act(),
+            
+            nn.Linear(512, 256),
+            self.norm(256),
+            self.act(),
+
+            nn.Linear(256 , output_size)
+        )
+        
+        self.decoder = nn.Sequential(
+            nn.Linear(output_size, 256),
+            self.norm(256),
+            self.act(),
+            
+            nn.Linear(256, 512),
+            self.norm(512),
+            self.act(),
+
+            nn.Linear(512, input_size),
+        )
+
     def forward(self, input):
         return self.encoder(input)
 
     def ae(self, input):
         return self.decoder(self.encoder(input))
-
 
 class AE_DGCCA(nn.Module):
     """
@@ -156,11 +179,21 @@ class AE_DGCCA(nn.Module):
         2. input_size = 520 (depends upon the input, please check before using this number)
         3. output_size = 10
     """
-    def __init__(self, num_views, input_size=784, output_size=10, device=torch.device('cpu'), network = AELinearBN, use_relu=True):
+    def __init__(self,
+                    num_views=3,
+                    input_size=784,
+                    output_size=10, 
+                    device=torch.device('cpu'), 
+                    network = AELinear, 
+                    use_relu=True,
+                    use_batch_norm=True):
         super(AE_DGCCA, self).__init__()
         self.model_list = []
         for i in range(num_views):
-            self.model_list.append(network(input_size=input_size, output_size=output_size, use_relu=use_relu))
+            self.model_list.append(network(input_size=input_size, 
+                                            output_size=output_size, 
+                                            use_relu=use_relu,
+                                            use_batch_norm=use_batch_norm))
         self.model_list = nn.ModuleList(self.model_list)
 
     def forward(self, x_list):

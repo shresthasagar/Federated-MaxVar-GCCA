@@ -5,21 +5,21 @@
 
 
 
-addpath ../algos
-addpath ../cg_matlab
+addpath ../fu2017/algos
+addpath ../fu2017/cg_matlab
 
 clear;
 clc;
 close;
 
-a = [9 3 23]
-disp("hello");
-data = load('../../real_data/Europarl_all.mat');
+data = load('../real_data/Europarl_all.mat');
 [~, I] = size(data.data);
 I = 3;
+
 for i=1:I 
     X{i} = data.data{i};
 end
+
 [L, M] = size(X{1});
 N = 50000;
 K = 10;
@@ -48,7 +48,7 @@ cost_MLSA = init_vars.cost_MLSA;
 Li = init_vars.Li;
 
 %%
-[Q,G_1,obj1,~,St1, time1] = LargeGCCA_federated_stochastic(X, K, 'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1, 'Reg_type', 'none', 'sgd', false, 'batch_size', 10000);
+[Q,G_1,obj1,~,St1, time1] = LargeGCCA_distributed_stochastic(X, K, 'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1, 'Reg_type', 'none', 'sgd', true, 'batch_size', 10000, 'distributed', true, 'rand_compress', true, 'compress_g', true);
 save('data/real_data_3view_fullgd_obj1.mat', 'obj1', 'time1');
 
 % [Q,G_2,obj2,~,St2, time2] = LargeGCCA_federated_stochastic(X, K, 'G_ini',G_ini,'Q_ini',Q_ini,'r',r,'algo_type','plain','Li',Li,'MaxIt',MaxIt,'Inner_it',1, 'Reg_type', 'none', 'sgd', false, 'batch_size', 10000);
