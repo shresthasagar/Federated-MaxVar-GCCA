@@ -1,9 +1,9 @@
-function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, varargin )
+function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,  K, X_test, varargin )
 
     %MaxIt,G,Q,Li,EXTRA,WZW,norm_vec,vec_ind
 
 
-    if (nargin-length(varargin)) ~= 2
+    if (nargin-length(varargin)) ~= 3
         error('Wrong number of required parameters');
     end
 
@@ -29,6 +29,7 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
     distributed = false;
     evaluate = false;
     q_store_interval = 100;
+    q_folder = '../data/simulation_outputs/real_sgd_distr';
     %--------------------------------------------------------------
     % Read the optional parameters
     %--------------------------------------------------------------
@@ -74,13 +75,15 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
                 case 'COMPRESS_G'
                     compress_g = varargin{i+1};
                 case 'COMPRESS_AVG'
-                    compress_avg = varargin{i+1}
+                    compress_avg = varargin{i+1};
                 case 'PRINT_LOG'
-                    print_log = varargin{i+1}
+                    print_log = varargin{i+1};
                 case 'EVALUATE'
-                    evaluate = varargin{i+1}
+                    evaluate = varargin{i+1};
                 case 'Q_STORE_INTERVAL'
-                    q_store_interval = varargin{i+1}
+                    q_store_interval = varargin{i+1};
+                case 'Q_FOLDER'
+                    q_folder = varargin{i+1};
                 otherwise
                     % Hmmm, something wrong with the parameter string
                     error(['Unrecognized option: ''' varargin{i} '''']);
@@ -89,11 +92,10 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
     end
 
     if evaluate
-        Q_store = zeros(I, ceil(MaxIt/q_store_interval)+1, M(1), K);
+        [aroc(1) nn_freq(1)] = eval_europarl(X_test, Q);
+        save([q_folder, '_', num2str(1), '.mat'], 'Q');
     end
-    for i=1:I
-        Q_store(i,1, :,:) = Q{i};
-    end
+    
     Nlevels = 2^(Nbits-1) - 1;
 
     switch REG_TYPE
@@ -316,6 +318,15 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
                 obj(it)=sum(obj_temp);
         end
         
+        if evaluate && rem(it,q_store_interval)==0
+            [aroc(ceil(it/q_store_interval)+1) nn_freq(ceil(it/q_store_interval)+1)] = eval_europarl(X_test, Q);
+            save([q_folder, '_', num2str(ceil(it/q_store_interval)+1), '.mat'], 'Q')
+            if print_log
+                disp(['at iteration ',num2str(it), ", obj:", num2str(obj(it)), ', aroc:', num2str(aroc(ceil(it/q_store_interval)+1)), ', nn_freq:', num2str(nn_freq(ceil(it/q_store_interval)+1))]);
+            end
+        end
+
+
         if print_log
             disp(['at iteration ',num2str(it), ", obj:", num2str(obj(it))]);
         end
@@ -331,15 +342,7 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
             break;
         end
 
-        if evaluate && rem(it,q_store_interval)==0
-            for view=1:I
-                Q_store(view, ceil(it/q_store_interval)+1, :, :) = Q{view};
-            end
-        end
         
-    end
-    if evaluate
-        Q = Q_store;
     end
 
     obj = [obj_0,obj];
