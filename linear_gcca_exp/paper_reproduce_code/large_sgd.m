@@ -28,16 +28,15 @@ r = 0;
 
 
 
-
 % batch_sizes = [5000, 50000];
-batch_sizes = [1000, 5000, 10000, 50000];
-
+% batch_sizes = [1000, 5000, 10000, 50000];
+batch_sizes = [5000]
 
 for trial = 1:TotalTrial
     disp(['at trial ',num2str(trial)])
     
     I = 3;
-    L = 50000;
+    L = 100000;
     M = 2000;
     N = 200;
     K = 5;
@@ -54,7 +53,8 @@ for trial = 1:TotalTrial
 
     % cond_mean(trial)=mean( condnum(i));
     tic;
-    filename = '../data/rand_1.mat';
+    filename = '../data/rand_2.mat';
+
     [ G_ini,Q_ini,Ux,Us,UB,cost_mlsa,Li ] = MLSA( X,K,m,r);
     % dist_MLSA(trial)=norm(G_ini'*Ubeta,2);
     save(filename,'X','G_ini','Q_ini','Li');
@@ -103,7 +103,8 @@ for trial = 1:TotalTrial
         
         %% Full resolution MAX-VAR GCCA with warm start
 
-        if batch_size == L
+        if 1
+        % if batch_size == L
             disp(['Full resolution with warm start ...'])
             [Q1, G_1, obj_warm_full_res(trial, batch_size_idx, :), ~, St1, t_warm_full_res(trial, batch_size_idx, :)] = LargeGCCA_distributed_stochastic( X,  K, ...
                                                                                 'G_ini',G_ini, ...
@@ -120,7 +121,8 @@ for trial = 1:TotalTrial
                                                                                 'batch_size', batch_size,  ...
                                                                                 'rand_compress', false,  ...
                                                                                 'compress_g', false, ...
-                                                                                'print_log', true); 
+                                                                                'print_log', true, ...
+                                                                                'simulate_comm_latency', true); 
         end
                                                           
         % Ditributed MAX-VAR GCCA with warm start
@@ -140,7 +142,10 @@ for trial = 1:TotalTrial
                                                                             'batch_size', batch_size,  ...
                                                                             'rand_compress', true,  ...
                                                                             'compress_g', true, ...
-                                                                            'print_log', true); 
+                                                                            'compress_avg', false, ...
+                                                                            'print_log', true, ...
+                                                                            'simulate_comm_latency', true); 
+
 
     
     
@@ -149,7 +154,7 @@ for trial = 1:TotalTrial
 end
 
 %% save the output for plots in the future
-filename = '../data/simulation_conditions/large_sgd.mat';
+filename = '../data/simulation_conditions_revised/large_sgd.mat';
 save(filename, 'obj_warm_full_res', 'obj_warm_distr', 't_warm_full_res', 't_warm_distr');
 
 
@@ -161,8 +166,9 @@ InnerIt = 10;
 Nbits = 3;
 r = 0;
 
-% batch_sizes = [5000, 50000];
-batch_sizes = [1000, 5000, 10000, 50000];
+batch_sizes = [5000];
+% batch_sizes = [1000, 5000, 10000, 50000];
+% batch_sizes = [1000]
 
 
 large = load(filename);
@@ -265,4 +271,4 @@ ax.FontSize = 16;
 
 set(gcf, 'PaperPosition', [0 0 12 6]); %Position plot at left hand corner with width 5 and height 5.
 set(gcf, 'PaperSize', [12 6]); %Set the paper to have width 5 and height 5.
-saveas(gcf, '../data/simulation_results/large_sgd_averaged', 'pdf') %Save f
+saveas(gcf, '../data/simulation_results_revised/large_sgd_averaged', 'pdf') %Save f

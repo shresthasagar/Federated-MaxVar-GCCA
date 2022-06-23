@@ -3,6 +3,9 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
     %MaxIt,G,Q,Li,EXTRA,WZW,norm_vec,vec_ind
 
 
+    % Use 40 gigabit ethernet. Has an effective speed of 4.1 Gbps.
+    communication_speed = 4402341478.4    % this is in bps 
+
     if (nargin-length(varargin)) ~= 2
         error('Wrong number of required parameters');
     end
@@ -29,6 +32,7 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
     distributed = false;
     evaluate = false;
     q_store_interval = 100;
+    simulate_comm_latency = false;
     %--------------------------------------------------------------
     % Read the optional parameters
     %--------------------------------------------------------------
@@ -81,6 +85,8 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
                     evaluate = varargin{i+1}
                 case 'Q_STORE_INTERVAL'
                     q_store_interval = varargin{i+1}
+                case 'SIMULATE_COMM_LATENCY'
+                    simulate_comm_latency = varargin{i+1}
                 otherwise
                     % Hmmm, something wrong with the parameter string
                     error(['Unrecognized option: ''' varargin{i} '''']);
@@ -148,7 +154,8 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
     M_temp = M_temp/I;
 
     M_avg_serv = M_temp;
-
+    M_avg_node = M_avg_serv;
+    
     if rand_compress
         compression_scheme = 'qsgd';
     else
@@ -203,9 +210,9 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
     final_lr = 1;
     current_lr = 1;
     for it=1:MaxIt
-        % At server: Recover G
-        G_client = G_client + G_quant;
         
+        % Node computations
+        G_client = G_client + G_quant;
         tic;
         
         current_lr = start_lr - (start_lr-final_lr)*(it/MaxIt);
@@ -218,13 +225,13 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
                     G_batch = G_client(ids,:); 
 
                     % current_lr = 1/it;
-                    Q{i}=Q{i}- current_lr*((L/batch_size)*1/Li{i})*((1/normalizer)*batch'*(batch*Q{i})+r*Q{i}-(1/sqrt(normalizer))*batch'*G_batch);
+                    Q{i}=Q{i}- current_lr*((L/batch_size)*1/Li{i})*((1/normalizer)*batch'*(batch*Q{i})+r*Q{i} -  (1/sqrt(normalizer))*batch'*G_batch);
                 end
             end
         else
             for i=1:I  
                 for inner_it=1:T % Gradient Descent
-                    Q{i}=Q{i}-(1/Li{i})*((1/L)*X{i}'*(X{i}*Q{i})+r*Q{i}-(1/sqrt(L))*X{i}'*G_client);
+                    Q{i}=Q{i} - (1/Li{i})*((1/L)*X{i}'*(X{i}*Q{i})+r*Q{i} - (1/sqrt(L))*X{i}'*G_client);
                 end    
             end
         end
@@ -245,15 +252,12 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
         %         end    
         %     end
         % end
-        time(it+1) = time(it) + toc;
-        
-        tic;
         for i=1:I
             % variable to be transmitted
             if sgd
-                XQ{i}= (1/sqrt(normalizer))*X{i}*Q{i};
+                XQ{i} = (1/sqrt(normalizer))*X{i}*Q{i};
             else
-                XQ{i}= (1/sqrt(L))*X{i}*Q{i};
+                XQ{i} = (1/sqrt(L))*X{i}*Q{i};
             end
             M_diff{i} = XQ{i} - M_serv{i};
             
@@ -276,10 +280,30 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
             % at the server
             M_serv{i} = M_serv{i} + M_quant{i};
         end
+        
+        time(it+1) = time(it) + toc/I;
+        
+        node_time = toc/I;
+
+        % Pause twice, for downlink and uplink respectively
+        comm_time = 0;
+        if simulate_comm_latency
+            if distributed
+                comm_time = 2*L*K*Nbits / communication_speed;
+                % pause(comm_time)
+            else
+                comm_time = 2*L*K*32 / communication_speed;
+                % pause(comm_time)
+            end
+        end
 
 
+        tic;
+        
+        % Server Computation
         M_temp = zeros(L,K);
-        for i=1:i
+        
+        for i=1:I
             M_temp = M_temp + M_serv{i};
         end
         M_temp = M_temp/I;
@@ -289,18 +313,28 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
         else
             M_avg_quant = M_temp - M_avg_serv;
         end
-
+        
         M_avg_serv = M_avg_serv + M_avg_quant;
+        server_time = toc;
+        
+        tic;
         [Ut,St,Vt]=svd(M_avg_serv,0);
         G = Ut(:,1:K)*Vt';
+        svd_time = toc;
+
         
+        tic;
         if distributed && compress_g 
             G_quant = compress(G-G_client, Nbits, compression_scheme, true);
         else
             G_quant = G - G_client;
         end
+        compression_time = toc;
+
         % time_acc(it)=sum(time_perit);
-        time(it+1) = time(it+1) + toc/I;
+        server_time = server_time + svd_time + compression_time + toc;
+        time(it+1) = time(it+1) + toc;
+
 
         obj_temp = 0;
         switch REG_TYPE
@@ -317,7 +351,7 @@ function [ Q, G ,obj,dist, St, time] = LargeGCCA_distributed_stochastic( X,K, va
         end
         
         if print_log
-            disp(['at iteration ',num2str(it), ", obj:", num2str(obj(it))]);
+            disp(['at iteration ',num2str(it), ", obj:", num2str(obj(it)), ", comm_time:", num2str(comm_time), ", node_time:", num2str(node_time), ", svd_time:", num2str(svd_time), ", server_time:", num2str(server_time), ", compresss:", num2str(compression_time)]);
         end
         
         if isempty(Um)~=1

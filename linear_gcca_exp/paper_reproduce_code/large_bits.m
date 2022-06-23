@@ -18,7 +18,7 @@ simulation_filename = 'large_bits.mat'
 %   2. Elapsed time at each iteration
 %   3. Data generating conditions (L, M, N, K, m, mu)
 
-TotalTrial = 5;
+TotalTrial = 1;
 mu = .1;
 noise_var = 0.1;
 MaxIt = 100;
@@ -27,10 +27,11 @@ Nbits = 3;
 r = 0;
 batch_size = 5000
 
-folder_name = '../data/simulation_conditions/large_bits/'
+folder_name = '../data/simulation_conditions_revised/large_bits/'
 
 bits_list = [2, 3, 4, 5]
 
+bits_list = [3]
 
 for trial = 1:TotalTrial
     disp(['at trial ',num2str(trial)])
@@ -148,6 +149,7 @@ for trial = 1:TotalTrial
                                                                             'batch_size', batch_size,  ...
                                                                             'rand_compress', true,  ...
                                                                             'compress_g', true, ...
+                                                                            'compress_avg', false, ...
                                                                             'print_log', true); 
 
     
@@ -160,21 +162,22 @@ end
 %% Visualization of Communication cost (bytes) vs Iteration
 figure(1)
 % save the output for plots in the future
-filename = '../data/simulation_conditions/large_bits.mat';
-% save(filename, 'obj_warm_full_res', 'obj_warm_distr', 't_warm_full_res', 't_warm_distr');
+filename = '../data/simulation_conditions_revised/large_bits.mat';
+save(filename, 'obj_warm_full_res', 'obj_warm_distr', 't_warm_full_res', 't_warm_distr');
 
 TotalTrial = 5;
 mu = .1;
 noise_var = 0.1;
 MaxIt = 100;
-InnerIt = 10;
+InnerIt = 1;
 Nbits = 3;
 r = 0;
 batch_size = 5000
 
-folder_name = '../data/simulation_conditions/large_bits/'
+folder_name = '../data/simulation_conditions_revised/large_bits/'
 
 bits_list = [2, 3, 4, 5]
+bits_list = [3]
 
 large = load(filename);
 obj_warm_full_res = large.obj_warm_full_res;
@@ -248,4 +251,4 @@ ax.FontSize = 16;
 
 set(gcf, 'PaperPosition', [0 0 12 6]); %Position plot at left hand corner with width 5 and height 5.
 set(gcf, 'PaperSize', [12 6]); %Set the paper to have width 5 and height 5.
-saveas(gcf, '../data/simulation_results/large_bits_averaged', 'pdf') %Save figure
+saveas(gcf, '../data/simulation_results_revised/large_bits_averaged_old2', 'pdf') %Save figure

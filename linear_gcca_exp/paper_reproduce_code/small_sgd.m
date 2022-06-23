@@ -18,7 +18,7 @@ simulation_filename = 'small_1.mat'
 %   2. Elapsed time at each iteration
 %   3. Data generating conditions (L, M, N, K, m, mu)
 
-TotalTrial = 50;
+TotalTrial = 10;
 mu = .1;
 noise_var = 0.1;
 MaxIt = 1000;
@@ -28,7 +28,9 @@ r = 0;
 
 
 
-batch_sizes = [10, 50, 100, 200, 350, 500]
+% batch_sizes = [10, 50, 100, 200, 350, 500]
+batch_sizes = [50, 100, 200]
+
 
 
 for trial = 1:TotalTrial
@@ -136,7 +138,7 @@ for trial = 1:TotalTrial
 end
 
 %% save the output for plots in the future
-filename = '../data/simulation_conditions/small_sgd.mat';
+filename = '../data/simulation_conditions_revised/small_sgd.mat';
 % save(filename, 'obj_warm_full_res', 'obj_warm_distr', 't_warm_full_res', 't_warm_distr', 'cost_optimal');
 
 
@@ -152,7 +154,7 @@ cost_optimal = small.cost_optimal;
 figure(1)
 
 
-TotalTrial = 50;
+TotalTrial = 10;
 mu = .1;
 noise_var = 0.1;
 MaxIt = 1000;
@@ -163,6 +165,7 @@ L = 500
 
 
 batch_sizes = [10, 50, 100, 200, 350, 500]
+batch_sizes = [50, 100, 200]
 
 initial_comm_cost = 32;
 
@@ -253,4 +256,4 @@ ax.FontSize = 16;
 
 set(gcf, 'PaperPosition', [0 0 12 6]); %Position plot at left hand corner with width 5 and height 5.
 set(gcf, 'PaperSize', [12 6]); %Set the paper to have width 5 and height 5.
-saveas(gcf, '../data/simulation_results/small_sgd_averaged', 'pdf') %Save f
+saveas(gcf, '../data/simulation_results_revised/small_sgd_averaged', 'pdf') %Save f
