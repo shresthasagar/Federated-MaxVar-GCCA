@@ -5,6 +5,7 @@ from collections import OrderedDict
 import torch
 import os
 
+save_filepath = 'data/diag_med_1000_500'
 
 # sample 1 filenames
 bene_2008_sample1 = 'ehr/data/sample1/Beneficiary_2008_Summary_File_Sample_1.csv'
@@ -307,4 +308,4 @@ if __name__ == '__main__':
             outpatient_claims_sample3]
 
     mat, data = get_all_views_combined(filenames,dgn_cols_str, med_cols_str[:10], 5000, 500)
-    torch.save((mat, data), 'data/dictionary_data/diag_med_1000_500')
+    torch.save((mat, data), save_filepath)
